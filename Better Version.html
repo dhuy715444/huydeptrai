@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Oracle's Veil - Tarot Reader</title>
+    <style>
+        /* --- General Styles & Fonts --- */
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap');
+
+        :root {
+            --font-main: 'Cinzel', serif;
+            --font-body: 'Lato', sans-serif;
+            --color-bg-start: #232526;
+            --color-bg-end: #414345;
+            --color-text: #EAEAEA;
+            --color-primary: #D4AF37; /* Gold */
+            --color-secondary: #E67E22; /* Orange */
+            --color-surface: #1E1E1E;
+            --color-blunt-gold: #e6c56d;
+            --color-blunt-dark: #f09d51;
+        }
+
+        body {
+            background: linear-gradient(to right, var(--color-bg-start), var(--color-bg-end));
+            color: var(--color-text);
+            font-family: var(--font-body);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        /* --- Deck Selection Screen --- */
+        #deck-selection-screen {
+            text-align: center;
+            animation: fadeInScreen 0.8s ease-in-out;
+        }
+
+        #deck-selection-screen h1 {
+            font-family: var(--font-main);
+            font-weight: 700;
+            font-size: clamp(2rem, 5vw, 2.5rem);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        #deck-selection-screen p {
+            font-size: clamp(1rem, 3vw, 1.1rem);
+            font-weight: 300;
+            margin-bottom: 40px;
+        }
+
+        .deck-choices {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .deck-card {
+            background-color: var(--color-surface);
+            border: 2px solid var(--color-surface);
+            width: 250px;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .deck-card:hover {
+            transform: translateY(-10px) scale(1.02);
+        }
+
+        .deck-card h2 {
+            font-family: var(--font-main);
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .deck-card .description {
+            font-size: 0.9rem;
+            text-align: center;
+            font-weight: 300;
+            line-height: 1.5;
+        }
+
+        #gold-foil-deck {
+            border-color: var(--color-primary);
+        }
+        #gold-foil-deck:hover {
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
+        }
+        #gold-foil-deck h2 { color: var(--color-primary); }
+
+        #dark-tarot-deck {
+            border-color: var(--color-secondary);
+        }
+        #dark-tarot-deck:hover {
+            box-shadow: 0 0 25px rgba(230, 126, 34, 0.3);
+        }
+        #dark-tarot-deck h2 { color: var(--color-secondary); }
+
+        /* --- Reading Chamber Screen --- */
+        #reading-chamber-screen {
+            display: none; /* Initially hidden */
+            animation: fadeInScreen 0.8s ease-in-out;
+        }
+
+        #card-display {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            min-height: 250px;
+            flex-wrap: wrap;
+            perspective: 1000px;
+        }
+
+        .tarot-card-container {
+            width: 150px; /* Adjusted for more cards */
+            height: 230px; /* Adjusted for more cards */
+            opacity: 0;
+            animation: fadeInCard 0.6s forwards;
+        }
+
+        .tarot-card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .tarot-card-container.flipped .tarot-card {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        .card-face-back {
+            background-color: var(--color-surface);
+        }
+        .card-face-back.gold-foil { border: 2px solid var(--color-primary); }
+        .card-face-back.dark-tarot { border: 2px solid var(--color-secondary); }
+        
+        .card-face-front {
+            background-color: #2c2c2c;
+            transform: rotateY(180deg);
+        }
+        .card-face-front.gold-foil { border: 1px solid var(--color-primary); }
+        .card-face-front.dark-tarot { border: 1px solid var(--color-secondary); }
+
+
+        .card-name {
+            font-family: var(--font-main);
+            font-weight: 700;
+            font-size: 0.9rem;
+            line-height: 1.1;
+        }
+
+        .card-visual {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 0;
+        }
+        
+        .card-visual svg {
+            width: 80%;
+            height: auto;
+        }
+
+        .card-position {
+            font-size: 0.75rem;
+            font-style: italic;
+            color: #ccc;
+        }
+
+        @keyframes fadeInScreen { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInCard { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        #interpretation-area, #final-message-area {
+            background-color: var(--color-surface);
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            min-height: 50px;
+        }
+        
+        #final-message-area {
+            border-top: 2px solid var(--color-primary);
+        }
+
+        #final-message-area h3 {
+             font-family: var(--font-main);
+            margin-top: 0;
+            text-align: center;
+        }
+        
+        .interpretation-placeholder {
+            text-align: center;
+            font-style: italic;
+            color: #888;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        #interpretation-area h3 {
+            font-family: var(--font-main);
+            margin-top: 0;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        #interpretation-text p, #final-blunt-message {
+            line-height: 1.6;
+            margin-bottom: 1.5em;
+            padding-bottom: 1.5em;
+            border-bottom: 1px solid #333;
+        }
+        #interpretation-text p:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        #interpretation-text strong, #final-message-area strong {
+            font-family: var(--font-main);
+            font-weight: 700;
+        }
+
+        .blunt-advice {
+            display: block;
+            margin-top: 1em;
+            padding: 10px;
+            border-radius: 4px;
+            font-style: italic;
+        }
+        
+        .blunt-advice.gold-foil {
+            background-color: rgba(212, 175, 55, 0.1);
+            border-left: 3px solid var(--color-blunt-gold);
+        }
+        
+        .blunt-advice.dark-tarot {
+             background-color: rgba(230, 126, 34, 0.1);
+             border-left: 3px solid var(--color-blunt-dark);
+        }
+
+        .blunt-advice strong {
+            color: var(--color-text);
+        }
+
+        #chat-interface {
+            margin-top: 20px;
+        }
+
+        #chat-log {
+            height: 200px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.25);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #333;
+        }
+        
+        #chat-log::-webkit-scrollbar { width: 6px; }
+        #chat-log::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+
+        .chat-message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .user-message { 
+            background-color: #2c3e50;
+            color: var(--color-text);
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        .oracle-message { 
+            background-color: var(--color-surface);
+            border: 1px solid #444;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+
+        #chat-form {
+            display: flex;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            background-color: var(--color-surface);
+            border: 1px solid #444;
+            color: var(--color-text);
+            padding: 12px;
+            border-radius: 20px 0 0 20px;
+            font-size: 1rem;
+        }
+        
+        #user-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        #submit-button {
+            background-color: var(--color-primary);
+            border: none;
+            color: var(--color-bg-start);
+            padding: 0 25px;
+            font-size: 1rem;
+            font-family: var(--font-main);
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 0 20px 20px 0;
+            transition: background-color 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Screen 1: Deck Selection -->
+        <div id="deck-selection-screen">
+            <h1>The Oracle's Veil</h1>
+            <p>Focus your mind. Choose the deck that calls to you.</p>
+            <div class="deck-choices">
+                <div class="deck-card" id="gold-foil-deck" onclick="selectDeck('goldFoil')">
+                    <h2>Greco-Roman Tarot</h2>
+                    <p class="description">Draw wisdom from the pantheon. Guidance from gods and goddesses for your modern odyssey.</p>
+                </div>
+                <div class="deck-card" id="dark-tarot-deck" onclick="selectDeck('darkTarot')">
+                    <h2>Demonic Tarot</h2>
+                    <p class="description">Confront the darkness within. Unflinching advice from the spirits and demons of the underworld.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 2: Reading Chamber -->
+        <div id="reading-chamber-screen">
+            <div id="card-display"></div>
+            <div id="interpretation-area">
+                <h3 id="spread-name"></h3>
+                <div id="interpretation-text"></div>
+            </div>
+            <div id="final-message-area" style="display: none;">
+                <h3>The Final Word</h3>
+                <div id="final-blunt-message"></div>
+            </div>
+            <div id="chat-interface">
+                <div id="chat-log"></div>
+                <form id="chat-form">
+                    <input type="text" id="user-input" placeholder="Ask your question..." autocomplete="off">
+                    <button type="submit" id="submit-button">Ask</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- DATABASE OF TAROT CARDS AND INTERPRETATIONS ---
+    const fullDeckData = {
+        major: [
+            { name: "The Fool", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M12 10 C15 10 15 5 10 2 C5 5 5 10 8 10 M10 12 v 6 M 8 14 h 4"/>`, darkTarot: `<path d="M10,2 A4,4 0 0,1 18,6 L14,18 M10,2 A4,4 0 0,0 2,6 L6,18 M8,12 L12,12"/>`}, meanings: { general: "Represents a new beginning, an adventure, and the purity of the unknown. It is the thrill of stepping off a cliff, trusting that you will be caught. It signifies innocence, spontaneity, and a free spirit untethered by the cynicism of the world.", situation: "The situation is defined by its newness and lack of a clear path. You are being asked to take a leap of faith into something completely unfamiliar. Past experience is not a reliable guide here.", action: "You must act with pure faith. This is not the time for meticulous planning or risk assessment. The necessary action is to embrace the unknown, even if it feels reckless or naive to others.", outcome: "The result is a completely new chapter in your life. It promises freedom, growth, and unexpected experiences. The success of this outcome, however, is entirely dependent on your willingness to let go of control and surrender to the journey.", blunt: "Stop hesitating and jump. Your fear of looking stupid is the only thing holding you back from a necessary experience." }},
+            { name: "The Magician", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M10 2 L10 18 M10 2 L6 6 M10 2 l4 4 M6 14 l4 4 l4 -4"/>`, darkTarot: `<path d="M10,2 v16 M4,10 h12 M8,6 L12,6 M8,14 L12,14 M10,2 L6,6 M10,2 L14,6"/>`}, meanings: { general: "Signifies the power of willpower, manifestation, and having all the necessary resources at your disposal. The Magician takes the raw potential of the universe (The Fool) and channels it into tangible reality.", situation: "The current situation is one of untapped potential. You have all the skills, tools, and resources required to achieve your goal. The only missing ingredient is your conscious will to act.", action: "Use what you have. The time for gathering more knowledge or tools is over. The required action is to take what is in your hands and mind and actively create something with it. Manifest your goal.", outcome: "You will succeed if you consciously apply your will. The outcome is not a matter of luck but of mastery. You have the power to create the result you desire through focused intention and action.", blunt: "You have everything you need. Stop making excuses and get to work. The only thing missing is your action." }},
+            { name: "The High Priestess", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M10 18 A 6 6 0 0 0 10 6 A 6 6 0 0 0 10 18 M10 6 L10 2 M7 4 h6"/>`, darkTarot: `<circle cx="10" cy="10" r="4"/><path d="M4,4 L16,16 M16,4 L4,16"/>`}, meanings: { general: "Represents intuition, the subconscious mind, and hidden knowledge. She is the guardian of secrets, suggesting that not all is as it seems on the surface. Her wisdom comes from within, not from the external world.", situation: "The situation is governed by hidden factors and intuition. The logical, conscious mind cannot grasp the full picture. There are secrets or subconscious elements at play that you need to uncover.", action: "You must be still and listen to your inner voice. The answer you seek is not in external advice or data, but in your own gut feelings, dreams, and intuition. Meditate, reflect, and look inward.", outcome: "Clarity will not come from logical deduction, but from a sudden insight or the revelation of a secret. The result will be a profound understanding that changes your entire perspective on the situation.", blunt: "Shut up and listen to your gut. The answer is already inside you; you're just not quiet enough to hear it." }},
+            { name: "The Empress", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M10 2 a4 4 0 00-4 4 v8 a4 4 0 008 0 V6 a4 4 0 00-4-4z M10 10 m-2 0 a2 2 0 114 0 2 2 0 11-4 0"/>`, darkTarot: `<path d="M10,2 L18,10 L10,18 L2,10 Z M10,6 L14,10 L10,14 L6,10 Z"/>`}, meanings: { general: "Symbolizes fertility, nurturing, abundance, and creativity. She is Mother Earth, representing the beauty of the natural world, the pleasure of the senses, and the power of creation.", situation: "The situation is one of fertile ground, ripe for growth. It requires a nurturing and patient approach. It could be a creative project, a relationship, or a need for self-care and comfort.", action: "Your role is to create, nurture, and be patient. Foster growth rather than forcing it. Provide comfort, support, and resources, either to yourself, a project, or another person.", outcome: "Abundance and growth are the natural results. Your efforts will bear fruit, leading to a period of comfort, creativity, and fulfillment. The outcome is one of natural, unforced success.", blunt: "Stop trying to force things. Give it love, give it time, and it will grow on its own." }},
+            { name: "The Emperor", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M10 2 L 7 9 h 6 L 10 2 M 9 9 L 6 18 M 11 9 L 14 18"/>`, darkTarot: `<path d="M2,2 L18,2 L18,8 L10,18 L2,8 Z M2,2 L10,8 L18,2"/>`}, meanings: { general: "Represents authority, structure, control, and the power of order. He is the patriarch who builds civilizations, establishes laws, and brings structure to chaos through decisive action.", situation: "The situation requires strong, decisive leadership and the implementation of clear rules. There is a need to bring order to a chaotic or unstructured environment. Emotion must give way to logic.", action: "Take charge. You need to be the authority figure. Implement a clear plan, set firm boundaries, and make logical, decisive choices. Do not be swayed by emotion.", outcome: "A stable and secure foundation will be established. The result is control, order, and a solid structure to build upon. This may, however, come at the cost of creative flexibility or emotional expression.", blunt: "Someone needs to be the boss here. It might as well be you. Get organized and lay down the law." }},
+            { name: "The Hierophant", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M10 2v16 M4 9h12 M4 13h12"/>`, darkTarot: `<path d="M10,2 L16,8 L10,18 L4,8 Z M10,8 V 14"/>`}, meanings: { general: "Symbolizes tradition, institutions, conformity, and conventional wisdom. He is the bridge between the divine and humanity, representing established belief systems, education, and mentorship.", situation: "You are operating within a traditional system with established rules and a clear hierarchy, such as a school, a large company, or a religious institution. Conforming to the structure is expected.", action: "Follow the established path. This is not the time to be a rebel. Seek guidance from a trusted mentor or institution. Learn the rules and work within them to achieve your goals.", outcome: "Success will come through conformity and following the proven path. The outcome is acceptance into a group or validation from a traditional system. You will gain by playing by the rules.", blunt: "Don't try to reinvent the wheel. Just do it the way it's always been done. Find a teacher and listen." }},
+            { name: "The Lovers", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M10 4L4 10h12L10 4z M4 12v6h5 M16 12v6h-5"/>`, darkTarot: `<path d="M10,2 L2,10 L10,18 M10,2 L18,10 L10,18"/>`}, meanings: { general: "Represents choice, union, harmony, relationships, and the alignment of personal values. It is about creating a deep connection with another person or making a decision that aligns with your authentic self.", situation: "A major choice is at hand. This is not a simple decision; it is a choice between two paths that will fundamentally define a part of your life. It often involves a significant relationship or a core belief.", action: "Choose with both your heart and your head. The decision must feel right and align with your deepest, most authentic values. It is about more than just surface-level logic or desire.", outcome: "The result will be a harmonious union or a decision that brings your life into alignment. This leads to a deep and meaningful connection, either with another person or with your true self.", blunt: "You have to make a choice. Pick the one that aligns with who you truly are, not just what looks good on paper." }},
+            { name: "The Chariot", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M4 4h12v6h-1.5l-2.5-4h-4l-2.5 4H4z M10 10v8m-4-2h8"/>`, darkTarot: `<path d="M2,16 L10,2 L18,16 H2 Z M6,12 H14"/>`}, meanings: { general: "Symbolizes willpower, determination, victory, and control. It is about harnessing opposing forces and driving them forward in a single, focused direction through sheer force of will.", situation: "You are in a situation where you must assert your will to succeed. Opposing forces, whether internal conflicts or external challenges, are pulling you in different directions and must be controlled.", action: "Take the reins. You must drive forward with absolute determination and discipline. Control your impulses and focus all your energy on a single goal to overcome the obstacles in your path.", outcome: "A hard-won victory. Success will not come from luck, but from your own determination and effort. If you stay focused and maintain control, you will achieve your objective.", blunt: "Stop complaining and start driving. You can win this if you have the guts to take control and fight for it." }},
+            { name: "Strength", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M6 3h8v2h-8z M8 5 C4 5, 4 12, 8 12h4c4 0, 4-7, 0-7 M10 12v6"/>`, darkTarot: `<path d="M10,2 A6,6 0 0,0 4,8 L10,18 L16,8 A6,6 0 0,0 10,2 Z M10,12 A2,2 0 1,1 10,8 A2,2 0 0,1 10,12 Z"/>`}, meanings: { general: "Represents inner strength, courage, compassion, and patience. It is the power to tame the wild beast within, not through brute force, but through gentle persuasion and quiet resolve.", situation: "The situation calls for courage and compassion, not aggression. You are facing your own inner fears, base instincts, or a difficult external situation that cannot be beaten into submission.", action: "Use gentle persuasion and inner resolve. Tame the wild energy with kindness, patience, and self-control. Your true strength lies in your ability to be compassionate and resilient under pressure.", outcome: "You will successfully handle the situation through your inner strength, gaining self-respect and mastery over your impulses. The outcome is one of peaceful control, not violent victory.", blunt: "Don't be a bully, especially to yourself. Your real power is in your patience and courage, not your roar." }},
+            { name: "The Hermit", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M5 18V9a2 2 0 012-2h6a2 2 0 012 2v9M3 18h14M10 5a2 2 0 100-4 2 2 0 000 4z"/>`, darkTarot: `<path d="M10,2 A4,4 0 0,0 6,6 V14 A4,4 0 0,0 10,18 A4,4 0 0,0 14,14 V6 A4,4 0 0,0 10,2 Z M10,12 V8"/>`}, meanings: { general: "Symbolizes introspection, isolation, and seeking truth from within. The Hermit retreats from the noise of the world to find the light of his own wisdom.", situation: "The outside world is a source of noise and confusion. The answers you are looking for cannot be found in other people, on social media, or in external events. It is a time for soul-searching.", action: "You must withdraw. Willingly go into the metaphorical dark and be alone with your thoughts. The truth you seek is waiting in the silence that you've been avoiding. Turn off the distractions.", outcome: "You will find a profound, personal truth or a deep insight. This wisdom will come at the cost of temporary isolation, but it will be unshakable and will guide your next steps.", blunt: "Stop asking everyone else for answers. Shut yourself away from the noise and find it in your own head." }},
+            { name: "Wheel of Fortune", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<circle cx="10" cy="10" r="8"/><path d="M10 2v16 M2 10h16"/>`, darkTarot: `<circle cx="10" cy="10" r="8"/><path d="M10,2 L10,18 M2,10 L18,10 M4,4 L16,16 M4,16 L16,4" transform="rotate(22.5 10 10)"/>`}, meanings: { general: "Represents cycles, fate, turning points, and changes in luck. The wheel is always turning, bringing ups and downs that are often outside of our direct control.", situation: "Events are in motion that are largely outside of your control. Your life is at a turning point, and the direction could shift dramatically without any action on your part. Fate is at play.", action: "Adapt to the changing circumstances. Your job is not to control the wheel but to ride it. Be flexible, stay centered, and accept the changes that are coming, whether they seem good or bad.", outcome: "A significant change in your circumstances is inevitable. The result is a major turning point that will set you on a completely new path, altering the course of your life.", blunt: "Life is about to change in a big way, and you don't get a vote. Deal with it." }},
+            { name: "Justice", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M2 8h16 M10 2v16 M4 12l6-4 6 4"/>`, darkTarot: `<path d="M10,2 L2,8 H18 L10,2 Z M10,8 V18 M4,14 H16"/>`}, meanings: { general: "Symbolizes fairness, truth, cause and effect, and the law. It represents the idea that all actions have consequences and that the truth will eventually be revealed.", situation: "The situation is about accountability and consequences. Your past actions, or the actions of others, are now being weighed, and a fair, objective judgment is imminent.", action: "Be honest and accountable above all else. Tell the truth, accept responsibility for your actions, and strive for a fair and ethical outcome for everyone involved. Do the right thing.", outcome: "A just and fair resolution. You will get exactly what you deserve, for better or for worse. The truth will come out, and the scales will be balanced.", blunt: "You're about to get exactly what you've earned. Hope you've been behaving yourself." }},
+            { name: "The Hanged Man", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M10 18v-8M5 10h10M10 10L6 4M10 10l4-4"/>`, darkTarot: `<path d="M10,18 V10 M4,4 H16 M10,2 V10 M4,10 H16"/>`}, meanings: { general: "Represents surrender, letting go, and seeing things from a new perspective. It is a willful sacrifice of movement and control in order to gain a deeper wisdom.", situation: "You are in a state of paralysis, feeling stuck. This is because you refuse to see the situation from a different angle. Your current perspective is the very thing that is trapping you.", action: "Let go of your current viewpoint completely. You must willingly sacrifice your ego, your plans, and your need to be 'right' in order to see the way out. Stop struggling.", outcome: "A breakthrough in understanding. The world will look completely different once you surrender, and the solution to your problem, which you couldn't see before, will become obvious.", blunt: "You're stuck because you're stubborn. Give up, change your perspective, and the path will appear." }},
+            { name: "Death", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M2 18l16-16M18 18L2 2"/>`, darkTarot: `<path d="M2,18 L18,2 M10,2 H18 V10 M2,10 v8 h8"/>`}, meanings: { general: "Symbolizes an unavoidable and absolute ending, which leads to transformation. This is not about literal death, but the end of a situation, a belief system, or a relationship, clearing the way for new growth.", situation: "A significant chapter of your life is ending, whether you like it or not. This is a final point of no return. Something must be purged from your life.", action: "Let go completely. Do not resist this ending. The more you fight the inevitable, the more painful the process will be. Your only task is to accept the closure and prepare for what comes next.", outcome: "A profound and permanent transformation. The old will be cleared away, making space for something entirely new. It is a necessary, and often painful, purge for any future growth to occur.", blunt: "It's over. Grieve it, accept it, and move on. Clinging to the rotting corpse of the past is pointless." }},
+            { name: "Temperance", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M4 4l8 8 8-8 M4 16h16"/>`, darkTarot: `<path d="M4,16 V4 L10,10 L16,4 V16 M7,10 H13"/>`}, meanings: { general: "Represents balance, moderation, patience, and finding the middle ground. It is the art of blending opposing forces to create a new, harmonious whole.", situation: "The situation requires a balanced and moderate approach. Extremes of any kind—whether in action, emotion, or thought—are dangerous and will lead to failure. You need to find a sustainable middle path.", action: "Find the middle way. You must mix and blend the opposing forces in your life to create a stable solution. Patience is your most important tool. Do not rush; integrate.", outcome: "Harmony and balance will be achieved. The result of your patience and moderation will be a stable, peaceful state that comes from successful integration, not from one side winning over the other.", blunt: "Chill out. Don't be so extreme in your thinking or actions. Find the middle ground and stay there." }},
+            { name: "The Devil", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M5 10a5 5 0 0010 0M8 2l4 4M12 2l-4 4"/>`, darkTarot: `<path d="M10,2 L2,8 v6 L10,18 L18,14 V8 Z M10,12 A2,2 0 1,1 10,8 A2,2 0 0,1 10,12 Z M8,2 H12"/>`}, meanings: { general: "Symbolizes addiction, bondage, toxic patterns, materialism, and limiting beliefs. It represents the chains we willingly put on ourselves, often convincing ourselves we have no choice.", situation: "You are trapped by your own appetites, fears, and illusions. You are in a prison of your own making, whether it's a toxic job, a codependent relationship, or a self-destructive habit.", action: "Acknowledge your own role in this bondage. Stop blaming external forces. You have the key to your own chains; the first step is to admit that you are the one who locked them.", outcome: "Freedom is possible, but only after you confront the ugly truth about your own choices. You can remain a willing slave to your desires, or you can face the discomfort of liberation.", blunt: "Stop pretending you're a victim. You chose these chains, and you are the only one who can choose to take them off." }},
+            { name: "The Tower", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M6 18V6h8v12H6z M4 6h12M8 2l-3 4h8l-3-4"/>`, darkTarot: `<path d="M8,2 L12,2 L12,10 L16,10 L10,18 L4,10 L8,10 L8,2 Z M7,6 L13,6"/>`}, meanings: { general: "Represents sudden, chaotic upheaval and the destruction of false foundations. It is a crisis that shatters your reality, revealing that what you believed to be true was built on a lie.", situation: "The foundations of your current situation—a belief, a relationship, a career—are built on a lie or ego, and the universe is tearing them down. This is a sudden, shocking, and destabilizing event.", action: "Survive it. Do not try to rebuild what is crumbling. Your only job is to brace for impact and get through the chaos. Let the tower fall. Huddle and protect yourself.", outcome: "The total destruction of your current reality, which is then followed by the freedom to build something new and authentic. It will be painful, but what comes after will be true.", blunt: "Everything is about to fall apart because it was built on nonsense. It's going to hurt. Don't try to stop it." }},
+            { name: "The Star", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M10 2l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z"/>`, darkTarot: `<path d="M10,2 l3,5 h6 l-5,4 l2,6 l-6,-4 l-6,4 l2,-6 l-5,-4 h6 Z"/>`}, meanings: { general: "Symbolizes hope, inspiration, healing, and guidance after a storm. It is the light at the end of the tunnel, promising peace and renewal after a period of destruction (The Tower).", situation: "After a period of darkness and chaos, there is now a glimmer of hope and a path to healing. The situation is one of quiet optimism and the promise of renewal.", action: "Have faith. Trust that the universe is guiding you toward healing. Follow the light of your inspiration and believe that things will get better. This is a time for quiet hope.", outcome: "A period of peace, healing, and profound inspiration. You will find your way out of the darkness and feel a renewed sense of purpose and hope for the future.", blunt: "You've been through hell. Now look up. There's hope, so don't you dare lose it." }},
+            { name: "The Moon", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M16 14A6 6 0 0110 18a6 6 0 110-12"/>`, darkTarot: `<path d="M18,10 A8,8 0 0,1 2,10 A8,8 0 0,0 18,10 Z M10,16 L10,4"/>`}, meanings: { general: "Represents illusion, fear, anxiety, and the mysteries of the subconscious. It suggests that things are not as they seem, and that your path is obscured by your own fears and projections.", situation: "You are operating based on fear and illusion, not reality. Your anxiety is clouding your judgment and distorting your perception of the situation. You are lost in the metaphorical dark.", action: "You must face your deep-seated fears. You have to walk through the darkness of your subconscious and confront what is truly scaring you. Do not trust what you see on the surface.", outcome: "Confusion and anxiety will persist and likely worsen until you find the real source of your fear. The outcome is continued uncertainty and potential self-deception if you don't face the truth.", blunt: "You're scared and confused for a reason, and it's probably not the one you think. Figure out what you're really afraid of." }},
+            { name: "The Sun", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<circle cx="10" cy="10" r="4" /><path d="M10 2V0M10 18v2M18 10h2M0 10h2M15.6 4.4l1.4-1.4M3 17l1.4-1.4M4.4 4.4L3 3M17 17l-1.4-1.4"/>`, darkTarot: `<circle cx="10" cy="10" r="3"/><path d="M10,2 L10,6 M10,14 L10,18 M2,10 L6,10 M14,10 L18,10 M4,4 L7,7 M13,13 L16,16 M4,16 L7,13 M13,7 L16,4"/>`}, meanings: { general: "Symbolizes success, clarity, joy, vitality, and absolute truth. It is the moment when all shadows disappear, and everything is illuminated with warmth and positivity.", situation: "The situation is overwhelmingly clear and positive. There are no hidden complexities or dangers. What you see is what you get, and what you get is unequivocally good.", action: "Move forward with total confidence and optimism. Shine your light brightly and be unapologetically you. There is no need for caution or self-doubt here. Embrace the joy.", outcome: "The outcome is guaranteed success, happiness, and total clarity. All will be revealed, and the result will be one of pure, radiant positivity and achievement.", blunt: "This is a straight-up 'YES'. Stop worrying and go enjoy your win." }},
+            { name: "Judgement", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<path d="M4 12h12v6H4z M10 12V4 M7 4h6"/>`, darkTarot: `<path d="M2,18 L10,2 L18,18 M2,18 H18 M6,12 H14"/>`}, meanings: { general: "Represents rebirth, absolution, and a final reckoning. It is a call to awaken, to rise up from the past, and to make a final judgment on your life's direction.", situation: "You are at a moment of final judgment. You are being called to account for your past actions and beliefs and to make a final, life-altering decision that will define your future.", action: "Answer the call to awaken. You must rise up, forgive yourself and others, and make a final, decisive judgment about your life. It is time to be reborn into a new level of awareness.", outcome: "Absolution and rebirth. You will be freed from the burdens of the past and can start a new life with a clean slate. The outcome is a profound spiritual or personal awakening.", blunt: "Wake up. It's time to make a final call on your life, forgive what's past, and move on." }},
+            { name: "The World", theme: { goldFoil: "", darkTarot: "" }, svg: { goldFoil: `<circle cx="10" cy="10" r="8"/><rect x="8" y="8" width="4" height="4"/>`, darkTarot: `<circle cx="10" cy="10" r="8"/><circle cx="10" cy="10" r="4"/><path d="M10,6 L6,10 L10,14 L14,10 Z"/>`}, meanings: { general: "Symbolizes completion, integration, and accomplishment. It is the successful end of a major life cycle, where all the pieces have come together in a harmonious whole.", situation: "You have reached the successful and fulfilling completion of a major life journey. The project is finished, the goal is achieved, and you are whole and complete in this aspect of your life.", action: "Celebrate your success. Take time to acknowledge how far you've come and to integrate all the lessons you have learned along the way. Enjoy this moment of completion before the next journey begins.", outcome: "A successful and fulfilling conclusion to your efforts. The outcome is a sense of wholeness, accomplishment, and being exactly where you are supposed to be.", blunt: "You did it. It's finished. The cycle is complete. Take a victory lap and enjoy the view from the top." }}
+        ],
+        wands: [ // Passion, Action, Ambition
+            { name: "Ace of Wands", svg: `<path d="M10 2v16 M8 4l4 4-4 4"/>`, meanings: { general: "New inspiration, creative spark, potential, and a burst of energy.", situation: "An opportunity for a new passion, project, or adventure has just appeared. The potential is enormous.", action: "Seize it. Act on this new inspiration immediately. The energy is there, but it won't last forever. Start now.", outcome: "The beginning of an exciting and energetic new venture. It will be filled with passion and growth.", blunt: "You have a great idea. Stop talking about it and do something." }},
+            { name: "Two of Wands", svg: `<path d="M6 2v16 M14 2v16 M6 6h8"/>`, meanings: { general: "Planning, future-oriented, making decisions, and seeing the bigger picture.", situation: "You've had a spark of inspiration, and now you must decide what to do with it. The situation calls for planning and looking ahead.", action: "Make a plan. Don't just sit on your idea. Decide on your next steps and commit to a path. The world is in your hands.", outcome: "You will embark on a journey, having made a clear decision about your future. The outcome is the first step of a well-planned venture.", blunt: "You have a choice. Make a plan and commit, or your idea will die." }},
+            { name: "Three of Wands", svg: `<path d="M5 2v16 M10 2v16 M15 2v16"/>`, meanings: { general: "Expansion, foresight, waiting for results, and progress.", situation: "Your plans are in motion, and you are now waiting for the results to come in. The initial work is done.", action: "Be patient and watchful. Keep an eye on the horizon for the results of your efforts. The time for hard labor is past; now is the time for observation.", outcome: "Your efforts will start to pay off. The ships are coming in, bringing the first signs of success from your venture.", blunt: "You've done the work. Now wait. Be patient and watch for results." }},
+            { name: "Four of Wands", svg: `<path d="M4 2v16 M16 2v16 M4 8h12"/>`, meanings: { general: "Celebration, harmony, homecoming, and a stable foundation.", situation: "A time of peace and celebration after a period of hard work. A happy, stable environment.", action: "Celebrate your success. Enjoy this moment of peace and stability with the people you care about. Acknowledge your accomplishments.", outcome: "A happy event, like a marriage, a homecoming, or the successful completion of a project. The result is joy and stability.", blunt: "You've earned a party. Take a break and celebrate what you've built." }},
+            { name: "Five of Wands", svg: `<path d="M2 4l16 12 M2 16l16-12 M10 2v16"/>`, meanings: { general: "Conflict, competition, disagreements, and minor struggles.", situation: "There are competing egos and ideas, leading to conflict and chaos. It's a struggle, but not a serious battle.", action: "Engage in the debate. Voice your opinion and fight for your position, but keep it constructive. It's about competition, not destruction.", outcome: "A period of struggle and disagreement that will eventually lead to a stronger solution, but it will be messy.", blunt: "Everyone is arguing. You need to fight for your idea or get lost in the noise." }},
+            { name: "Six of Wands", svg: `<path d="M10 18V6 M10 6L6 2 M10 6l4-4"/>`, meanings: { general: "Victory, public recognition, success, and self-confidence.", situation: "You have achieved a significant victory and are receiving public praise for it. Your hard work has paid off.", action: "Accept the praise. Step into the spotlight and be proud of what you've accomplished. This is your moment.", outcome: "Public recognition and success. The outcome is a clear and celebrated victory that boosts your confidence.", blunt: "You won. Enjoy the victory parade. You deserve it." }},
+            { name: "Seven of Wands", svg: `<path d="M10 2v16 M4 8l6-4 6 4"/>`, meanings: { general: "Defensiveness, challenge, perseverance, and holding your ground.", situation: "You are being challenged and must defend your position. You may feel like it's you against the world.", action: "Stand your ground. Do not back down. Defend your beliefs and your work with courage and perseverance.", outcome: "You will successfully defend your position if you persevere. The outcome is maintaining your success against all challenges.", blunt: "Don't give up. You're in a fight, so keep fighting." }},
+            { name: "Eight of Wands", svg: `<path d="M2 4l16 0 M2 8l16 0 M2 12l16 0 M2 16l16 0"/>`, meanings: { general: "Speed, rapid action, travel, and swift communication.", situation: "Events are moving very quickly. News is arriving, and things are happening at a rapid pace.", action: "Act quickly. There is no time for delay. Make swift decisions and communicate clearly to keep up with the pace of events.", outcome: "A rapid conclusion. The situation will resolve itself quickly. Expect fast-moving news or travel.", blunt: "Things are happening fast. Keep up or get left behind." }},
+            { name: "Nine of Wands", svg: `<path d="M10 2v16 M4 4h12v12H4z"/>`, meanings: { general: "Resilience, last stand, persistence, and nearing the end of a battle.", situation: "You are wounded and weary but still standing. You are in the final stages of a long struggle.", action: "Gather your last ounce of strength and keep going. You are almost at the finish line. Do not give up now.", outcome: "You will succeed through sheer resilience. The final push will be difficult, but you have the strength to see it through.", blunt: "You're tired, but you're not beaten. One last push." }},
+            { name: "Ten of Wands", svg: `<path d="M4 10h12 M10 4v12 M6 6l8 8 M14 6l-8 8"/>`, meanings: { general: "Burden, responsibility, hard work, and being overwhelmed.", situation: "You have taken on too much responsibility and are now burdened and overwhelmed by it all.", action: "Delegate or drop something. You cannot continue to carry this entire load by yourself. You must ask for help or let some of it go.", outcome: "Burnout. If you continue on this path, you will be crushed by the weight of your responsibilities.", blunt: "You're carrying too much. Put some of it down before it breaks you." }},
+            { name: "Page of Wands", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">P</text>`, meanings: { general: "Enthusiasm, exploration, creative sparks, and new ideas.", situation: "An opportunity for a new creative idea or adventure is presenting itself. It's full of exciting potential.", action: "Explore the idea. Be enthusiastic and curious. Follow this spark of inspiration and see where it leads without a firm commitment yet.", outcome: "The beginning of a creative journey or the discovery of a new passion.", blunt: "You have a fun new idea. Go play with it." }},
+            { name: "Knight of Wands", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">Kn</text>`, meanings: { general: "Energy, passion, impulsiveness, adventure, and sudden action.", situation: "The situation is charged with energy and requires rapid movement. There is an opportunity to make a bold move.", action: "Act now. This is not the time for deliberation. Seize the opportunity with passion and energy, even if it feels impulsive.", outcome: "A rapid, exciting change. A journey, a project, or an idea will take off quickly. It will be an adventure, but may lack a long-term plan.", blunt: "Go. Now. Thinking about it for one more second is a waste of time." }},
+            { name: "Queen of Wands", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">Q</text>`, meanings: { general: "Confidence, passion, determination, and a vibrant social life.", situation: "The situation calls for a confident, charismatic leader who is passionate and determined.", action: "Be bold and confident. Lead with passion and inspire others with your energy and self-assurance. Own your power.", outcome: "You will successfully influence the situation through your charisma and determination, achieving your goals while maintaining a vibrant social connection.", blunt: "Be the life of the party, but also be the boss. You've got this." }},
+            { name: "King of Wands", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">K</text>`, meanings: { general: "Visionary leadership, taking control, bold action, and long-term goals.", situation: "The situation requires a visionary leader who can see the big picture and take bold, decisive action to achieve it.", action: "Lead with vision. Take control of the situation, inspire others with your long-term goal, and don't be afraid to take calculated risks.", outcome: "You will successfully achieve a major long-term goal through your leadership and vision. The outcome is the realization of a grand ambition.", blunt: "You have a vision. Now be the leader who makes it happen. Take charge." }}
+        ],
+        cups: [ // Emotions, Relationships, Intuition
+            { name: "Ace of Cups", svg: `<path d="M5 5h10v2a5 5 0 01-10 0V5zM10 12v6M7 18h6"/>`, meanings: { general: "New emotional beginnings, love, intuition, creativity, and relationships.", situation: "An opportunity for a new emotional connection or creative project is present. A new wave of feeling is available to you.", action: "Be open to receiving. Your task is not to seek, but to be ready for the love, inspiration, or emotional clarity that is being offered.", outcome: "The beginning of a new, emotionally fulfilling relationship, project, or phase of life. Deep satisfaction and connection are the results.", blunt: "Open your heart. Love or inspiration is knocking, don't be too cynical to answer." }},
+            { name: "Two of Cups", svg: `<path d="M4 2h4v4h-4z M12 2h4v4h-4z M8 8h4"/>`, meanings: { general: "Partnership, mutual attraction, union, and shared feelings.", situation: "The situation is defined by a strong partnership or mutual connection between two people.", action: "Form a partnership. Work together with someone, sharing your feelings and goals. This is not something to do alone.", outcome: "A strong, harmonious partnership. The result is a balanced and loving connection based on mutual respect.", blunt: "This is about two people. Team up. Make it official." }},
+            { name: "Three of Cups", svg: `<path d="M2 2h4v4H2z M14 2h4v4h-4z M8 8h4v4H8z"/>`, meanings: { general: "Celebration, friendship, community, and collaboration.", situation: "The situation involves your community or social circle. It's a time for celebration and group connection.", action: "Celebrate with others. Share your joy with your friends and community. Collaborate on a group effort.", outcome: "A happy social event or a successful collaboration. The result is joy found in community.", blunt: "This is about your friends. Either celebrate with them or be wary of them." }},
+            { name: "Four of Cups", svg: `<path d="M2 2h4v4H2z M8 2h4v4H8z M14 2h4v4h-4z M8 8h4v4H8z"/>`, meanings: { general: "Apathy, discontent, contemplation, and emotional boredom.", situation: "You are feeling emotionally withdrawn and dissatisfied, ignoring opportunities being offered to you.", action: "Look up. You need to reassess your emotional state and notice the new opportunities you are currently ignoring out of boredom or apathy.", outcome: "Missed opportunities. If you continue in this state of discontent, you will miss out on a genuine offer of emotional connection or happiness.", blunt: "You're bored and feeling sorry for yourself. Snap out of it before you miss something good." }},
+            { name: "Five of Cups", svg: `<path d="M2 14h4v4H2z M8 14h4v4H8z M14 2h4v4h-4z"/>`, meanings: { general: "Loss, grief, regret, and focusing on the negative.", situation: "You are focused on a past loss or disappointment, ignoring what you still have.", action: "Acknowledge your grief, but then turn around. You must shift your focus from what was lost to what remains. There is still hope.", outcome: "Continued sadness and regret. If you keep focusing on the spilled cups, you will never appreciate the ones that are still full.", blunt: "You're crying over spilled milk. Grieve, then turn around and see what's left." }},
+            { name: "Six of Cups", svg: `<path d="M5 2h4v4H5z M11 2h4v4h-4z M5 8h4v4H5z M11 8h4v4h-4z M2 14h4v4H2z M14 14h4v4h-4z"/>`, meanings: { general: "Nostalgia, childhood memories, innocence, and returning to the past.", situation: "The situation is connected to your past, childhood, or old friends. It's a time of happy nostalgia.", action: "Reconnect with your past. Embrace the simple joys and innocence of a happier time. This may mean visiting old friends or places.", outcome: "A happy reunion or a pleasant trip down memory lane. The result is a feeling of comfort and simple joy.", blunt: "Something from your past is coming back. It's probably a good thing." }},
+            { name: "Seven of Cups", svg: `<circle cx="10" cy="10" r="2"/><path d="M10 8V2 M10 12v6 M8 10H2 M12 10h6 M7 7l-4-4 M13 7l4-4 M7 13l-4 4 M13 13l4 4"/>`, meanings: { general: "Choices, illusion, fantasy, and wishful thinking.", situation: "You are faced with many options, but many of them are illusions or fantasies. You are in danger of being seduced by unrealistic dreams.", action: "Get real. You must look beyond the fantasy and make a choice based on reality, not just wishful thinking.", outcome: "Indecision and potential disappointment if you choose based on illusion. You must ground yourself to make a wise choice.", blunt: "You're daydreaming. Wake up and make a realistic choice, or you'll end up with nothing." }},
+            { name: "Eight of Cups", svg: `<path d="M2 18h16 M10 14V4 M6 10l-4 4 M14 10l4 4"/>`, meanings: { general: "Walking away, disillusionment, leaving something behind, and seeking more.", situation: "You realize that something you've built no longer brings you emotional fulfillment, and you feel compelled to leave it behind.", action: "Walk away. It's time to leave this situation behind in search of deeper meaning, even if it looks good on the surface.", outcome: "A journey to find deeper emotional or spiritual fulfillment. It will be a difficult departure, but a necessary one for your soul's growth.", blunt: "This isn't working for you anymore. It's time to leave." }},
+            { name: "Nine of Cups", svg: `<circle cx="10" cy="6" r="4"/><path d="M2 14h16v4H2z"/>`, meanings: { general: "Wish fulfillment, satisfaction, contentment, and emotional pleasure.", situation: "The situation is one of deep emotional satisfaction. You have what you want, and you are content.", action: "Enjoy it. Savor this moment of contentment and satisfaction. There is no catch.", outcome: "Your wish will be granted. The result is happiness, pleasure, and emotional fulfillment.", blunt: "You get what you want. The end. Enjoy it." }},
+            { name: "Ten of Cups", svg: `<path d="M2 10 A8 8 0 0 1 18 10 M4 2h12 M6 6h8"/>`, meanings: { general: "Ultimate happiness, family, harmony, and emotional fulfillment.", situation: "This is the picture of ideal happiness, usually involving family and harmonious relationships. It is a state of lasting emotional joy.", action: "Embrace the love and joy around you. Share your happiness with your loved ones and appreciate the harmony in your life.", outcome: "Lasting emotional fulfillment and domestic bliss. The result is a happy family and a life filled with love.", blunt: "This is the 'happily ever after' card. It's as good as it gets." }},
+            { name: "Page of Cups", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">P</text>`, meanings: { general: "Creative opportunities, emotional messages, and childlike curiosity.", situation: "An unexpected emotional message or creative opportunity is on its way. It may seem naive or playful.", action: "Be open to your feelings and creative urges. Approach the situation with curiosity and an open heart.", outcome: "The beginning of a new creative project or a new emotional awareness. It's the start of something beautiful.", blunt: "Listen to your heart. A new feeling or idea is trying to get your attention." }},
+            { name: "Knight of Cups", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">Kn</text>`, meanings: { general: "Romance, charm, following the heart, and being a dreamer.", situation: "Someone (or you) is acting as a romantic idealist, led by emotion and charm.", action: "Follow your heart. Make a romantic gesture or pursue a creative dream with passion, but be aware that it might not be entirely practical.", outcome: "A romantic proposal or the pursuit of an artistic dream. The journey will be beautiful, but the destination is uncertain.", blunt: "You're in love with an idea. Go for it, but don't be surprised if it's not what you expected." }},
+            { name: "Queen of Cups", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">Q</text>`, meanings: { general: "Emotional intelligence, compassion, intuition, and calmness.", situation: "The situation requires a high degree of emotional intelligence and compassion. A calm, intuitive presence is needed.", action: "Lead with your heart, but with wisdom. Be the calm, compassionate person who listens and understands. Trust your intuition to guide you.", outcome: "A situation handled with grace and emotional maturity. The result is healing and understanding through compassion.", blunt: "Be the emotionally stable one. Listen more than you talk." }},
+            { name: "King of Cups", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">K</text>`, meanings: { general: "Emotional mastery, balance, diplomacy, and control over feelings.", situation: "The situation requires someone who is in complete control of their emotions, able to be a compassionate but firm leader.", action: "Act with emotional balance. Make decisions that are both compassionate and wise. You must be the master of your own feelings.", outcome: "A situation resolved through masterful diplomacy and emotional control. The result is a fair and balanced outcome for all.", blunt: "You're the master of your emotions. Act like it. Be calm, be kind, but be in charge." }}
+        ],
+        swords: [ // Thoughts, Conflict, Truth
+            { name: "Ace of Swords", svg: `<path d="M10 2v16 M6 14h8"/>`, meanings: { general: "Breakthrough, clarity, truth, and a new idea.", situation: "A moment of sudden clarity or a breakthrough idea has cut through confusion. The truth is revealed.", action: "Use this clarity. Act on this new understanding with decisiveness. Cut through the noise and speak your truth.", outcome: "A new way of thinking. The result is a powerful breakthrough that will bring clarity and truth, even if it's difficult.", blunt: "You finally see the truth. Now do something about it." }},
+            { name: "Two of Swords", svg: `<path d="M2 2l16 16 M2 16l16-16"/>`, meanings: { general: "Stalemate, indecision, avoiding the truth, and a truce.", situation: "You are in a stalemate, refusing to make a difficult decision. You are willfully ignoring the truth.", action: "Make a choice. The indecision is a bigger problem than either of the options. You must face the truth and decide.", outcome: "The stalemate will continue until you act. No progress can be made until a decision is made.", blunt: "You already know the answer, you're just too scared to admit it. Make the damn decision." }},
+            { name: "Three of Swords", svg: `<path d="M10 4 L4 10 h12z M10 4v14"/>`, meanings: { general: "Heartbreak, painful truth, sorrow, and separation.", situation: "A painful truth has been revealed, leading to heartbreak and sorrow. This is a moment of pure, sharp pain.", action: "Accept the pain. Do not try to avoid or numb the sorrow. The only way out is through it. Allow yourself to grieve.", outcome: "A painful but necessary realization. The heartbreak will eventually lead to healing, but only after the truth has been fully accepted.", blunt: "This hurts. It's supposed to. Face the pain so you can move on." }},
+            { name: "Four of Swords", svg: `<path d="M2 18h16 M10 14V4 M6 10l-4 4 M14 10l4 4"/>`, meanings: { general: "Rest, recuperation, contemplation, and a strategic pause.", situation: "You are in need of rest after a period of conflict or stress. It is a time for quiet contemplation.", action: "Rest. Take a break from the battle. You need to retreat and recharge your mental batteries before you can continue.", outcome: "Renewed strength. After a period of rest, you will be able to return to the situation with a clearer mind and more energy.", blunt: "You're burned out. Take a nap. The problem will still be there when you wake up." }},
+            { name: "Five of Swords", svg: `<path d="M10 2v16 M4 8l6-4 6 4 M4 14l6-4 6 4"/>`, meanings: { general: "Hollow victory, conflict, betrayal, and winning at all costs.", situation: "A conflict where winning has come at a great cost, leaving you or others defeated and resentful. A pyrrhic victory.", action: "Assess the cost of this victory. Is it worth it? Your best move might be to walk away from the conflict altogether.", outcome: "A victory that feels like a loss. You may win the argument, but you will damage your relationships and your own integrity.", blunt: "You won, but you were an asshole about it. Was it worth it?" }},
+            { name: "Six of Swords", svg: `<path d="M4 14h12 M10 14V4 M6 10l-4 4 M14 10l4 4"/>`, meanings: { general: "A transition, moving on, leaving trouble behind, and a sad departure.", situation: "You are moving away from a difficult or painful situation towards something better, but the journey is tinged with sadness.", action: "Keep moving forward. You are heading in the right direction, even if it's difficult to leave the past behind. Do not look back.", outcome: "You will reach a place of greater peace and stability. The journey is necessary for your mental well-being.", blunt: "It's time to go. It will be sad, but it's better than staying here." }},
+            { name: "Seven of Swords", svg: `<path d="M10 2v10 M4 8l6-4 6 4 M4 14h12"/>`, meanings: { general: "Deception, betrayal, theft, and getting away with something.", situation: "There is deception or betrayal at play. Someone (maybe you) is acting dishonestly or trying to get away with something.", action: "Be strategic, but be wary of your own integrity. You might be tempted to take a shortcut, but it could backfire.", outcome: "A temporary gain through deception, but it is likely to be discovered. This path is risky and often leads to isolation.", blunt: "Someone is being sneaky. It might be you. Be careful, because this is likely to blow up in your face." }},
+            { name: "Eight of Swords", svg: `<path d="M10 2v16 M2 6h16 M2 14h16"/>`, meanings: { general: "Self-imprisonment, victim mentality, limiting beliefs, and feeling trapped.", situation: "You feel trapped and powerless, but the restrictions are self-imposed. You have more power than you think.", action: "Change your perspective. Realize that you are the one trapping yourself with your own thoughts and beliefs. You can choose to walk away.", outcome: "Continued helplessness if you maintain your victim mentality. Freedom if you are willing to see your own role in the situation.", blunt: "You're not trapped. You just think you are. Open your eyes and walk away." }},
+            { name: "Nine of Swords", svg: `<path d="M10 18A8 8 0 0 0 10 2 M2 10h16"/>`, meanings: { general: "Anxiety, worry, fear, and nightmares. The dark night of the soul.", situation: "You are consumed by anxiety and fear. Your thoughts are creating a mental hell for you.", action: "Seek help. You need to talk about your fears and anxieties to see that they are blown out of proportion. Do not suffer in silence.", outcome: "Continued mental anguish if you do nothing. Relief and a new perspective if you are willing to face your fears and share them.", blunt: "Your anxiety is eating you alive. Talk to someone before you spiral." }},
+            { name: "Ten of Swords", svg: `<path d="M10 2v16 M2 10h16 M5 5l10 10 M5 15l10-10"/>`, meanings: { general: "Rock bottom, betrayal, finality, failure, and utter defeat.", situation: "You are at your lowest point. The situation is a complete failure or a painful betrayal, and there is no way to salvage it.", action: "Surrender. There is nothing left to do but accept defeat. The battle is lost. Your only action is to stop fighting and acknowledge the end.", outcome: "The only positive outcome is that it cannot get any worse. This is the absolute end, which means a new beginning is the only possibility, however distant.", blunt: "You've hit rock bottom. It's painful and final. Stop trying to fix it and just let it be over." }},
+            { name: "Page of Swords", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">P</text>`, meanings: { general: "Curiosity, new ideas, seeking truth, and mental energy.", situation: "A new idea or a quest for truth has sparked your curiosity. You are full of questions and mental energy.", action: "Ask questions. Be curious and investigate. Learn everything you can about the situation before you act.", outcome: "The discovery of new information that will bring clarity. It's the beginning of a quest for truth.", blunt: "You're curious about something. Go find out the truth." }},
+            { name: "Knight of Swords", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">Kn</text>`, meanings: { general: "Hasty, decisive action. Assertiveness, ambition, and cutting through illusion.", situation: "The situation requires a swift, decisive, and intellectually sharp response. There is no time for emotional deliberation.", action: "Charge forward with your idea. Be assertive and cut straight to the point. Your ambition is your guide.", outcome: "A quick, possibly ruthless, resolution. You will achieve your goal, but you may leave some collateral damage in your wake.", blunt: "Stop talking, start doing. Be fast, be smart, and don't worry about being nice." }},
+            { name: "Queen of Swords", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">Q</text>`, meanings: { general: "Independent, clear-minded, honest, and sharp-witted.", situation: "The situation requires someone who is intellectually independent and can see the truth without emotional bias.", action: "Use your intelligence and wit. Set clear boundaries and communicate with honesty, even if it's uncomfortable. Do not let emotion cloud your judgment.", outcome: "A situation resolved with clear, unbiased judgment. The truth will be spoken, and clear boundaries will be set.", blunt: "Be the smart, honest one who isn't afraid to say what needs to be said." }},
+            { name: "King of Swords", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">K</text>`, meanings: { general: "Intellectual authority, truth, justice, and ethical judgment.", situation: "The situation requires an authoritative, intellectual leader who can make a just and ethical decision.", action: "Lead with your intellect and integrity. Make a decision based on truth and justice, and be the authority on the matter.", outcome: "A fair and just resolution based on intellectual clarity and ethical principles. The truth will prevail.", blunt: "You are the authority here. Make the smart, fair call and stand by it." }}
+        ],
+        pentacles: [ // Money, Work, Material World
+            { name: "Ace of Pentacles", svg: `<circle cx="10" cy="10" r="4" fill="none"/>`, meanings: { general: "New opportunity, manifestation, prosperity, and a tangible result.", situation: "A tangible opportunity for prosperity—a new job, a financial offer, or a chance to build something real—is present.", action: "Accept the offer. This is a green light to move forward with a practical venture. Invest your time and energy here.", outcome: "The beginning of a prosperous and stable venture. The result will be tangible and long-lasting.", blunt: "This is a real opportunity. Take it. It's about money or a solid new start." }},
+            { name: "Two of Pentacles", svg: `<path d="M6 6a4 4 0 100 8 M14 6a4 4 0 110 8 M3 10h14"/>`, meanings: { general: "Juggling, balancing priorities, adaptability, and managing resources.", situation: "You are juggling multiple priorities, likely related to work and finances. It requires skill and adaptability.", action: "Stay flexible. You need to be able to adapt to changing circumstances to keep all your plates spinning. Don't drop the ball.", outcome: "You will successfully manage your priorities if you remain adaptable, but it will be a constant balancing act.", blunt: "You're juggling a lot. Stay flexible, or you're going to drop something important." }},
+            { name: "Three of Pentacles", svg: `<path d="M10 4L4 10h12z M8 12h4v4H8z"/>`, meanings: { general: "Teamwork, collaboration, craftsmanship, and learning.", situation: "A situation where teamwork and collaboration are key to success. Your skills are being recognized.", action: "Collaborate. Work with others, pooling your skills and expertise. Be open to learning from your teammates.", outcome: "A successful project completed through effective teamwork. The result is high-quality work and recognition for your skills.", blunt: "You can't do this alone. Work with the team and get it done right." }},
+            { name: "Four of Pentacles", svg: `<rect x="3" y="3" width="6" height="6" fill="none"/><rect x="11" y="3" width="6" height="6" fill="none"/><rect x="3" y="11" width="6" height="6" fill="none"/><rect x="11" y="11" width="6" height="6" fill="none"/>`, meanings: { general: "Control, hoarding, stability, security, and a scarcity mindset.", situation: "You are clinging too tightly to what you have, be it money, control, or a relationship, out of fear of loss.", action: "Loosen your grip. You need to be willing to risk or share what you have in order to grow. Your conservatism is becoming a prison.", outcome: "If you continue to hoard, you will stagnate. The outcome is stability at the cost of growth and joy. Nothing will be lost, but nothing will be gained.", blunt: "Your fear of losing is making you a miser with your own life. Let something go." }},
+            { name: "Five of Pentacles", svg: `<path d="M10 2L4 8h12z M8 10h4v8H8z"/>`, meanings: { general: "Hardship, poverty, isolation, and feeling left out in the cold.", situation: "You are experiencing a period of financial hardship or feeling isolated and rejected.", action: "Ask for help. You are not alone, even if it feels that way. You must overcome your pride and seek support from those who can offer it.", outcome: "Continued hardship if you remain isolated. The possibility of relief if you are willing to reach out for help.", blunt: "You're in a tough spot and feeling alone. Swallow your pride and ask for help." }},
+            { name: "Six of Pentacles", svg: `<circle cx="10" cy="6" r="4" fill="none"/><path d="M2 14h16 M10 10v8"/>`, meanings: { general: "Generosity, charity, giving and receiving, and a balance of resources.", situation: "A situation involving generosity and charity. One person is in a position to give, and another is in a position to receive.", action: "Be generous if you can; be grateful if you receive. The key is to maintain a balance of giving and taking.", outcome: "A fair distribution of resources. The result is a balanced and charitable exchange that benefits everyone involved.", blunt: "Either give help or accept it graciously. It's about charity." }},
+            { name: "Seven of Pentacles", svg: `<path d="M2 18h16 M10 14V4 M6 10l-4 4 M14 10l4 4"/>`, meanings: { general: "Patience, investment, long-term view, and waiting for a harvest.", situation: "You have invested your time and energy into something, and now you are waiting for it to grow. It requires a long-term perspective.", action: "Be patient. Your work is not yet ready to be harvested. You must continue to nurture your investment and wait for the right moment.", outcome: "A successful harvest, but only if you are patient. The result of your hard work will be significant, but it will take time.", blunt: "You've planted the seeds. Don't dig them up to see if they're growing. Be patient." }},
+            { name: "Eight of Pentacles", svg: `<circle cx="6" cy="6" r="2" fill="none"/><circle cx="14" cy="6" r="2" fill="none"/><circle cx="6" cy="14" r="2" fill="none"/><circle cx="14" cy="14" r="2" fill="none"/>`, meanings: { general: "Craftsmanship, skill development, diligence, and apprenticeship.", situation: "You are diligently working on improving your skills and craftsmanship. It's a time of focused, repetitive work.", action: "Keep practicing. Dedicate yourself to your craft and pay attention to the details. The key is hard work and dedication.", outcome: "Mastery of a skill. The result of your diligence will be a high level of expertise and quality work.", blunt: "Keep your head down and do the work. Practice makes perfect." }},
+            { name: "Nine of Pentacles", svg: `<circle cx="10" cy="10" r="8"/><circle cx="10" cy="10" r="4"/>`, meanings: { general: "Self-sufficiency, luxury, independence, and enjoying the fruits of your labor.", situation: "You have worked hard and are now in a position to enjoy a life of comfort and independence. You are self-sufficient.", action: "Enjoy your success. You have earned this period of luxury and independence. Take time to appreciate the fruits of your labor.", outcome: "A life of financial independence and material comfort. The result is enjoying the success you created for yourself, by yourself.", blunt: "You've made it. Enjoy your success. You don't need anyone else." }},
+            { name: "Ten of Pentacles", svg: `<circle cx="10" cy="10" r="8"/><circle cx="10" cy="10" r="4"/><circle cx="10" cy="10" r="1"/>`, meanings: { general: "Legacy, inheritance, family wealth, and long-term stability.", situation: "The situation involves family wealth, legacy, and long-term security. It's about the foundations you are building for future generations.", action: "Think long-term. Make decisions that will ensure the stability and prosperity of your family or business for years to come.", outcome: "A lasting legacy and generational wealth. The result is a secure and prosperous foundation that will endure.", blunt: "This is about long-term security and family money. Build something that lasts." }},
+            { name: "Page of Pentacles", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">P</text>`, meanings: { general: "New opportunities, manifestation, a student of the material world.", situation: "An opportunity to start a new job, project, or course of study has appeared. It's a tangible, practical beginning.", action: "Be a diligent student. Apply yourself to this new opportunity with focus and a desire to learn. It's time to manifest your goals.", outcome: "The beginning of a prosperous venture or a new skill. The result will be tangible and rewarding if you apply yourself.", blunt: "You have a real opportunity to learn or earn. Don't screw it up." }},
+            { name: "Knight of Pentacles", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">Kn</text>`, meanings: { general: "Hard work, routine, diligence, and a slow and steady approach.", situation: "The situation requires a methodical, reliable, and hardworking approach. There are no shortcuts.", action: "Be patient and diligent. Stick to the routine and work hard. Slow and steady wins this race.", outcome: "Success through reliability and hard work. The result will be solid and dependable, but it will take time to achieve.", blunt: "This is a marathon, not a sprint. Just keep plodding along. You'll get there." }},
+            { name: "Queen of Pentacles", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">Q</text>`, meanings: { general: "Nurturing, practicality, providing for others, and financial security.", situation: "The situation requires a practical, nurturing approach. It's about creating a secure and comfortable environment for yourself and others.", action: "Be the provider. Focus on practical matters—finances, home, and health—to create a stable and nurturing environment.", outcome: "A secure and prosperous home life. The result is being able to provide for yourself and your loved ones in a practical, down-to-earth way.", blunt: "Take care of business at home. Make sure everyone is fed and the bills are paid." }},
+            { name: "King of Pentacles", svg: `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="12" font-family="Cinzel">K</text>`, meanings: { general: "Abundance, mastery of the material world, success, and providing security.", situation: "The situation requires the touch of a master—someone who is successful, reliable, and knows how to build and maintain wealth.", action: "Act like a king. Take control of your finances and your career with confidence and a touch of generosity. Build an empire.", outcome: "The height of material success and security. The result is a prosperous and stable empire that you have built through your own mastery.", blunt: "You're at the top of your game. Enjoy the wealth and success you've built." }}
+        ]
+    };
+
+    // --- SPREAD DEFINITIONS ---
+    const spreads = [
+        { name: "Shadow Work", positions: ["Trigger", "Hidden Fear", "Root Cause", "How to Heal"], keywords: ["shadow work", "trigger", "hidden fear", "root cause", "heal", "breakup", "trauma", "self-sabotage", "why do i keep"] },
+        { name: "Career Direction", positions: ["Current Path", "Strengths", "Weaknesses", "Hidden Opportunity", "Outcome"], keywords: ["career", "job", "promotion", "my path", "current role", "vocation"] },
+        { name: "Situation – Action – Outcome", positions: ["Situation", "Action", "Outcome"], keywords: ["what should i do", "how should i", "what to do", "advice", "strategic", "interview", "navigate conflict"] },
+        { name: "You – Them – The Relationship", positions: ["You", "Them", "The Relationship"], keywords: ["relationship with", "what do they think", "he thinks", "she thinks", "they think", "dating", "partnership", "motives"] },
+        { name: "Mind – Body – Spirit", positions: ["Mind", "Body", "Spirit"], keywords: ["burnout", "burnt out", "stress", "feeling lost", "unmotivated", "disconnected", "wellness", "alignment"] },
+        { name: "Obstacle – Advice – Likely Outcome", positions: ["Obstacle", "Advice", "Likely Outcome"], keywords: ["obstacle", "challenge", "block", "stuck", "stagnation", "problem"] },
+        { name: "What You Want – What You Need – What You’ll Get", positions: ["What You Want", "What You Need", "What You’ll Get"], keywords: ["what do i want", "what do i need", "goals", "aspirations", "expectations"] },
+        { name: "Internal – External – Path Forward", positions: ["Internal", "External", "Path Forward"], keywords: ["is it me", "in my head", "confusion", "mixed signals", "overwhelm", "i feel"] },
+        { name: "Past – Present – Future", positions: ["Past", "Present", "Future"], keywords: ["how did", "where is this going", "progression", "timeline", "dynamics"] } // Default-like spread
+    ];
+
+    // --- APPLICATION STATE AND DOM ELEMENTS ---
+    let currentDeck = null;
+    let originalQuestion = "";
+    let drawnCardNames = [];
+    let gameState = 'asking'; // asking | reading
+
+    // Screen Elements
+    const deckSelectionScreen = document.getElementById('deck-selection-screen');
+    const readingChamberScreen = document.getElementById('reading-chamber-screen');
+    
+    // Reading Elements
+    const cardDisplay = document.getElementById('card-display');
+    const spreadNameEl = document.getElementById('spread-name');
+    const interpretationTextEl = document.getElementById('interpretation-text');
+    const finalMessageArea = document.getElementById('final-message-area');
+    const finalBluntMessageEl = document.getElementById('final-blunt-message');
+    
+    // Chat Elements
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const chatLog = document.getElementById('chat-log');
+    const submitButton = document.getElementById('submit-button');
+
+    // --- CORE LOGIC ---
+    function buildDeck(deckData, color) {
+        const fullDeck = [];
+        const strokeColor = color === 'goldFoil' ? 'var(--color-primary)' : 'var(--color-secondary)';
+    
+        const processSvg = (svg) => {
+            let finalSvg = svg.replace(/<path/g, `<path stroke="${strokeColor}" stroke-width="1.5" fill="none"`);
+            finalSvg = finalSvg.replace(/<circle/g, `<circle stroke="${strokeColor}" stroke-width="1.5" fill="none"`);
+            finalSvg = finalSvg.replace(/<rect/g, `<rect stroke="${strokeColor}" stroke-width="1.5" fill="none"`);
+            finalSvg = finalSvg.replace(/<text/g, `<text fill="${strokeColor}"`);
+            return finalSvg;
+        };
+
+        ['major', 'wands', 'cups', 'swords', 'pentacles'].forEach(category => {
+            deckData[category].forEach(card => {
+                const newCard = { ...card };
+                newCard.displayName = `${card.name} ${card.theme ? card.theme[color] : ''}`.trim();
+                newCard.svg = processSvg(card.svg[color] || card.svg.goldFoil || card.svg); // Handle different SVG structures
+                fullDeck.push(newCard);
+            });
+        });
+        
+        return fullDeck;
+    }
+
+
+    function selectDeck(deckName) {
+        const selectedDeckData = fullDeckData;
+        const color = deckName;
+        const builtDeck = buildDeck(selectedDeckData, color);
+
+        currentDeck = {
+            name: deckName === 'goldFoil' ? 'Greco-Roman Tarot' : 'Demonic Tarot',
+            class: deckName,
+            cards: builtDeck
+        };
+        
+        deckSelectionScreen.style.display = 'none';
+        readingChamberScreen.style.display = 'block';
+        submitButton.style.backgroundColor = (deckName === 'goldFoil') ? 'var(--color-primary)' : 'var(--color-secondary)';
+        userInput.style.borderColor = (deckName === 'goldFoil') ? '' : '#444';
+        userInput.addEventListener('focus', () => {
+             userInput.style.borderColor = (deckName === 'goldFoil') ? 'var(--color-primary)' : 'var(--color-secondary)';
+        });
+        userInput.addEventListener('blur', () => {
+             userInput.style.borderColor = '#444';
+        });
+        
+        addMessageToLog('oracle', `You have chosen the ${currentDeck.name}. The cards are shuffled. Focus your mind. What do you wish to know?`);
+    }
+
+    chatForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const question = userInput.value.trim();
+        if (question === '') return;
+
+        addMessageToLog('user', question);
+        userInput.value = '';
+        
+        const lowerCaseQuestion = question.toLowerCase();
+        if (lowerCaseQuestion === 'reset' || lowerCaseQuestion === 'shuffle') {
+            resetForNewReading();
+            return;
+        }
+
+        if (gameState === 'asking') {
+            originalQuestion = question;
+        }
+
+        performReading(question);
+    });
+
+    async function performReading(currentQuestion) {
+        const spread = analyzeQuestion(currentQuestion);
+        const numCardsToDraw = spread.positions.length;
+        
+        submitButton.disabled = true;
+        userInput.placeholder = "The oracle is concentrating...";
+        finalMessageArea.style.display = 'none';
+
+
+        const availableCards = currentDeck.cards.filter(card => !drawnCardNames.includes(card.name));
+        
+        if (availableCards.length < numCardsToDraw) {
+            addMessageToLog('oracle', `There are not enough cards left for a full ${numCardsToDraw}-card reading. Please type <strong>'reset'</strong> or <strong>'shuffle'</strong> to begin a new session.`);
+            submitButton.disabled = false;
+            userInput.placeholder = 'Type "reset" to begin...';
+            return;
+        }
+        
+        if (availableCards.length < (numCardsToDraw + 3) && gameState === 'reading') {
+            addMessageToLog('oracle', `The deck is running low. You may want to <strong>'reset'</strong> soon for a fresh reading.`);
+        }
+
+        gameState = 'reading';
+        
+        const drawnCards = drawCards(availableCards, numCardsToDraw);
+        drawnCards.forEach(card => drawnCardNames.push(card.name));
+        
+        displayCards(drawnCards, spread);
+        
+        interpretationTextEl.innerHTML = '<div class="interpretation-placeholder">The Oracle is consulting the ether...</div>';
+        let readingSummary = [];
+
+        const interpretations = await Promise.all(
+            drawnCards.map((card, index) => getDynamicInterpretation(card, spread.positions[index], currentQuestion))
+        );
+        
+        interpretationTextEl.innerHTML = ''; // Clear placeholder
+        
+        interpretations.forEach((interp, index) => {
+            const card = drawnCards[index];
+            const position = spread.positions[index];
+            const p = document.createElement('p');
+            p.innerHTML = `<strong>${position} (${card.displayName}):</strong> ${interp}`;
+            interpretationTextEl.appendChild(p);
+            readingSummary.push(`${position}: ${card.name} - ${interp.split('<span')[0]}`);
+        });
+
+        finalBluntMessageEl.innerHTML = `<div class="interpretation-placeholder">Synthesizing the final message...</div>`;
+        finalMessageArea.style.display = 'block';
+
+        const finalMessage = await getDynamicFinalMessage(originalQuestion, spread.name, readingSummary.join('\n'));
+        finalBluntMessageEl.innerHTML = finalMessage;
+        
+        submitButton.disabled = false;
+        userInput.placeholder = 'Ask a follow-up or type "reset"...';
+        submitButton.textContent = 'Follow-up';
+        addMessageToLog('oracle', "The cards have spoken. Ask a follow-up question for deeper insight, or type <strong>'reset'</strong> to clear the board.");
+    }
+    
+    function analyzeQuestion(question) {
+        const q = question.toLowerCase();
+        for (const spread of spreads) {
+            for (const keyword of spread.keywords) {
+                if (q.includes(keyword)) {
+                    return spread;
+                }
+            }
+        }
+        return spreads.find(s => s.name === "Past – Present – Future"); // Default
+    }
+
+    function drawCards(availableCards, numCards) {
+        const deckCopy = [...availableCards];
+        const drawn = [];
+        for (let i = 0; i < numCards; i++) {
+            if (deckCopy.length === 0) break;
+            const randomIndex = Math.floor(Math.random() * deckCopy.length);
+            drawn.push(deckCopy.splice(randomIndex, 1)[0]);
+        }
+        return drawn;
+    }
+    
+    async function getDynamicInterpretation(card, position, question) {
+        const prompt = `Act as an expert tarot reader in the style of Labyrinthos. Provide a detailed, insightful interpretation for the following card draw.
+        User's Question: "${question}"
+        Card Drawn: "${card.name}"
+        Position in Spread: "${position}"
+        Card's Core Meanings: General: ${card.meanings.general}. Situation: ${card.meanings.situation}. Action: ${card.meanings.action}. Outcome: ${card.meanings.outcome}.
+
+        First, write a detailed paragraph explaining what this card means in this specific position, directly addressing the user's question. Then, write a separate, final sentence that is a blunt, one-line piece of advice based on the card's core message: "${card.meanings.blunt}".`;
+
+        try {
+            const apiKey = ""; // Per instructions
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            const result = await response.json();
+            
+            if (!result.candidates || !result.candidates[0].content.parts[0].text) {
+                throw new Error("Invalid API response structure");
+            }
+
+            const text = result.candidates[0].content.parts[0].text;
+            const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) || [text];
+            const bluntText = sentences.pop().trim();
+            const mainText = sentences.join(' ').trim();
+
+            return `${mainText}<span class="blunt-advice ${currentDeck.class}"><strong>Blunt Advice:</strong> ${bluntText}</span>`;
+        } catch (error) {
+            console.error("Dynamic interpretation failed, using fallback:", error);
+            const positionKey = position.toLowerCase().split(' ')[0];
+            const mainInterpretation = card.meanings[positionKey] || card.meanings.general;
+            return `${mainInterpretation}<span class="blunt-advice ${currentDeck.class}"><strong>Blunt Advice:</strong> ${card.meanings.blunt}</span>`;
+        }
+    }
+
+    async function getDynamicFinalMessage(question, spreadName, readingSummary) {
+        const prompt = `You are The Oracle. Synthesize the following tarot reading into one final, blunt, and actionable summary. Do not repeat the individual card meanings. Provide a direct, overarching conclusion and piece of advice based on the entire reading.
+        User's Question: "${question}"
+        Spread: "${spreadName}"
+        The Reading Summary:
+        ${readingSummary}
+        
+        Your Final, Synthesized Message:`;
+
+         try {
+            const apiKey = ""; // Per instructions
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            const result = await response.json();
+
+            if (!result.candidates || !result.candidates[0].content.parts[0].text) {
+                throw new Error("Invalid API response structure");
+            }
+            return result.candidates[0].content.parts[0].text;
+        } catch (error) {
+            console.error("Final message API call failed, using local fallback:", error);
+            // Fallback to local synthesis
+            const cards = drawnCardNames.map(name => {
+                 return fullDeckData.major.find(c => c.name === name) ||
+                        fullDeckData.wands.find(c => c.name === name) ||
+                        fullDeckData.cups.find(c => c.name === name) ||
+                        fullDeckData.swords.find(c => c.name === name) ||
+                        fullDeckData.pentacles.find(c => c.name === name)
+            });
+            return getFinalBluntMessage(cards);
+        }
+    }
+
+
+    function displayCards(cards, spread) {
+        cardDisplay.innerHTML = '';
+        interpretationTextEl.innerHTML = '';
+        spreadNameEl.textContent = spread.name;
+
+        cards.forEach((card, index) => {
+            const container = document.createElement('div');
+            container.className = 'tarot-card-container';
+            container.style.animationDelay = `${index * 0.2}s`;
+
+            container.innerHTML = `
+                <div class="tarot-card">
+                    <div class="card-face card-face-back ${currentDeck.class}"></div>
+                    <div class="card-face card-face-front ${currentDeck.class}">
+                        <div class="card-name">${card.displayName}</div>
+                        <div class="card-visual">
+                            <svg viewBox="0 0 20 20" preserveAspectRatio="xMidYMid meet">${card.svg}</svg>
+                        </div>
+                        <div class="card-position">${spread.positions[index]}</div>
+                    </div>
+                </div>
+            `;
+            cardDisplay.appendChild(container);
+            
+            setTimeout(() => {
+                container.classList.add('flipped');
+            }, (index + 1) * 200 + 100);
+        });
+    }
+
+    function resetForNewReading() {
+        gameState = 'asking';
+        drawnCardNames = [];
+        originalQuestion = "";
+        
+        cardDisplay.innerHTML = '';
+        interpretationTextEl.innerHTML = '';
+        spreadNameEl.textContent = '';
+        finalMessageArea.style.display = 'none';
+        
+        userInput.placeholder = 'Ask a new question...';
+        submitButton.textContent = 'Ask';
+        
+        addMessageToLog('oracle', 'The deck has been reshuffled. The energies are reset. Ask a new question when you are ready.');
+    }
+    
+    function addMessageToLog(sender, text) {
+        const messageEl = document.createElement('div');
+        messageEl.classList.add('chat-message', `${sender}-message`);
+        messageEl.innerHTML = text;
+        chatLog.appendChild(messageEl);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    </script>
+</body>
+</html>
